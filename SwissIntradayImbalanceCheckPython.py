@@ -13,6 +13,10 @@ from email import encoders
 SWISSGRID_EIC = "10YCH-SWISSGRIDZ"
 STATKRAFT_EIC = "11XSTATKRAFT001N"
 
+AMPRION_EIC="10YDE-RWENET---I"
+
+SUBSTRING_TO_FIND_SWISS="_TPS_11XSTATKRAFT001N_10XCH-SWISSGRIDC_"
+
 NODE_SCHEDULE_MESSAGE = 'ScheduleMessage'
 NODE_SCHEDULE_TIMESERIES = 'ScheduleTimeSeries'
 NODE_PERIOD = 'Period'
@@ -88,28 +92,30 @@ def send_mail(send_from, send_to,send_cc,send_bcc, subject, message, files=[],
 
     print("Mail sent successfully")
 
-def GetLatestSwissIntradaySchedule(myPath):
+def GetLatestSwissIntradaySchedule(myPath, substringToFind):
     from os import listdir
     from os.path import isfile, join
     from datetime import datetime
 
     onlyfiles = [f for f in listdir(myPath) 
                  if isfile(join(myPath, f)) 
-                 if f.__contains__("_TPS_11XSTATKRAFT001N_10XCH-SWISSGRIDC_")
+                 if f.__contains__(substringToFind)
                  if f.__contains__(datetime.now().strftime("%Y%m%d"))
                  ]
 
-    highestVersion=1
     latestSchedule=""
+    if len(onlyfiles)>0:
 
-    for file in onlyfiles:
+        highestVersion=1
+        latestSchedule=onlyfiles[0]
 
-        version=float(file[-7:][:3])
+        for file in onlyfiles:
 
-        if version>highestVersion:
-            highestVersion=version
-            latestSchedule=file
+            version=float(file[-7:][:3])
 
+            if version>highestVersion:
+                highestVersion=version
+                latestSchedule=file
 
     return latestSchedule
 
@@ -158,54 +164,54 @@ def GetEmailSubject(myPath):
 
     return warnMessage
 
-def GetImportFlows(scheduleMessage):
-    externalFlowsIntoSwitzerland = {}
+def GetImportFlows(scheduleMessage, tsoEIC):
+    externalFlowsInto = {}
 
     for ts in scheduleMessage[NODE_SCHEDULE_MESSAGE][NODE_SCHEDULE_TIMESERIES]:
 
-        if str(ts[NODE_IN_AREA][NODE_V]) == SWISSGRID_EIC and str(ts[NODE_OUT_AREA][NODE_V]) != SWISSGRID_EIC and str(
+        if str(ts[NODE_IN_AREA][NODE_V]) == tsoEIC and str(ts[NODE_OUT_AREA][NODE_V]) != tsoEIC and str(
                 ts[NODE_IN_PARTY][NODE_V]) == STATKRAFT_EIC and str(ts[NODE_OUT_PARTY][NODE_V]) == STATKRAFT_EIC:
-            externalFlowsIntoSwitzerland[str(ts[NODE_OUT_AREA][NODE_V]) + " => " + str(ts[NODE_IN_AREA][NODE_V])] = ts
+            externalFlowsInto[str(ts[NODE_OUT_AREA][NODE_V]) + " => " + str(ts[NODE_IN_AREA][NODE_V])] = ts
 
-    return externalFlowsIntoSwitzerland
+    return externalFlowsInto
 
 
-def GetExportFlows(scheduleMessage):
-    externalFlowsOutOfSwitzerland = {}
+def GetExportFlows(scheduleMessage, tsoEIC):
+    externalFlowsOutOf = {}
 
     for ts in scheduleMessage[NODE_SCHEDULE_MESSAGE][NODE_SCHEDULE_TIMESERIES]:
 
-        if str(ts[NODE_IN_AREA][NODE_V]) != SWISSGRID_EIC and str(ts[NODE_OUT_AREA][NODE_V]) == SWISSGRID_EIC and str(
+        if str(ts[NODE_IN_AREA][NODE_V]) != tsoEIC and str(ts[NODE_OUT_AREA][NODE_V]) == tsoEIC and str(
                 ts[NODE_IN_PARTY][NODE_V]) == STATKRAFT_EIC and str(ts[NODE_OUT_PARTY][NODE_V]) == STATKRAFT_EIC:
-            externalFlowsOutOfSwitzerland[str(ts[NODE_OUT_AREA][NODE_V]) + " => " + str(ts[NODE_IN_AREA][NODE_V])] = ts
+            externalFlowsOutOf[str(ts[NODE_OUT_AREA][NODE_V]) + " => " + str(ts[NODE_IN_AREA][NODE_V])] = ts
 
-    return externalFlowsOutOfSwitzerland
+    return externalFlowsOutOf
 
 
-def GetBuys(scheduleMessage):
-    internalBuyPositionsSwitzerland = {}
+def GetBuys(scheduleMessage, tsoEIC):
+    internalBuyPositions = {}
 
     for ts in scheduleMessage[NODE_SCHEDULE_MESSAGE][NODE_SCHEDULE_TIMESERIES]:
 
-        if str(ts[NODE_IN_AREA][NODE_V]) == SWISSGRID_EIC and str(ts[NODE_OUT_AREA][NODE_V]) == SWISSGRID_EIC and str(
+        if str(ts[NODE_IN_AREA][NODE_V]) == tsoEIC and str(ts[NODE_OUT_AREA][NODE_V]) == tsoEIC and str(
                 ts[NODE_IN_PARTY][NODE_V]) == STATKRAFT_EIC and str(ts[NODE_OUT_PARTY][NODE_V]) != STATKRAFT_EIC:
-            internalBuyPositionsSwitzerland[
+            internalBuyPositions[
                 str(ts[NODE_OUT_PARTY][NODE_V]) + " => " + str(ts[NODE_IN_PARTY][NODE_V])] = ts
 
-    return internalBuyPositionsSwitzerland
+    return internalBuyPositions
 
 
-def GetSells(scheduleMessage):
-    internalSellPositionsSwitzerland = {}
+def GetSells(scheduleMessage, tsoEIC):
+    internalSellPositions = {}
 
     for ts in scheduleMessage[NODE_SCHEDULE_MESSAGE][NODE_SCHEDULE_TIMESERIES]:
 
-        if str(ts[NODE_IN_AREA][NODE_V]) == SWISSGRID_EIC and str(ts[NODE_OUT_AREA][NODE_V]) == SWISSGRID_EIC and str(
+        if str(ts[NODE_IN_AREA][NODE_V]) == tsoEIC and str(ts[NODE_OUT_AREA][NODE_V]) == tsoEIC and str(
                 ts[NODE_IN_PARTY][NODE_V]) != STATKRAFT_EIC and str(ts[NODE_OUT_PARTY][NODE_V]) == STATKRAFT_EIC:
-            internalSellPositionsSwitzerland[
+            internalSellPositions[
                 str(ts[NODE_OUT_PARTY][NODE_V]) + " => " + str(ts[NODE_IN_PARTY][NODE_V])] = ts
 
-    return internalSellPositionsSwitzerland
+    return internalSellPositions
 
 
 def GetAggrPos(LstTimeseries):
@@ -284,33 +290,41 @@ path="C:\\Test\\"
 
 recipients=["lukas.dicke@web.de","lukas.dicke@statkraft.de"]
 
+substringToFind=SUBSTRING_TO_FIND_SWISS
 
+substringToFind="_TPS_11XSTATKRAFT001N_10XDE-RWENET---W"
 
-file=GetLatestSwissIntradaySchedule(path)
+tsoEic=SWISSGRID_EIC
 
-message = json.loads(GetJsonContent(path + file))
+tsoEic=AMPRION_EIC
 
-imbalancedPeriods=GetImbalancePeriods(exportFlows= GetAggrPos(GetExportFlows(message)),
-                                      importFlows= GetAggrPos(GetImportFlows(message)),
-                                      buyPositions= GetAggrPos(GetBuys(message)),
-                                      sellPositions= GetAggrPos(GetSells(message)),
-                                      periods= len(message[NODE_SCHEDULE_MESSAGE][NODE_SCHEDULE_TIMESERIES][0][NODE_PERIOD][NODE_INTERVAL]))
+file=GetLatestSwissIntradaySchedule(path,substringToFind)
 
-if len(imbalancedPeriods)>0:
+if file!="":
 
-    print("Swissgrid schedule (V" + str(GetLatestSwissIntradayScheduleVersion(path)) + ") is imbalanced. Email is triggered")
+    message = json.loads(GetJsonContent(path + file))
 
-    send_mail(send_from="nominations@statmark.de",
-              send_to=recipients,
-              send_cc= [],
-              send_bcc= [],
-              subject=GetEmailSubject(path),
-              message=GetEmailBody(imbalancedPeriods, path),
-              files=[],
-              server= "mail.123domain.eu",
-              port=587,
-              username="nominations@statmark.de",
-              password="fk390krvadf",
-              use_tls=True)
-else:
-    print("Hooray: Swissgrid schedule (V" + str(GetLatestSwissIntradayScheduleVersion(path)) + ") is balanced.")
+    imbalancedPeriods=GetImbalancePeriods(exportFlows= GetAggrPos(GetExportFlows(message,tsoEic)),
+                                          importFlows= GetAggrPos(GetImportFlows(message,tsoEic)),
+                                          buyPositions= GetAggrPos(GetBuys(message,tsoEic)),
+                                          sellPositions= GetAggrPos(GetSells(message,tsoEic)),
+                                          periods= len(message[NODE_SCHEDULE_MESSAGE][NODE_SCHEDULE_TIMESERIES][0][NODE_PERIOD][NODE_INTERVAL]))
+
+    if len(imbalancedPeriods)>0:
+
+        print("Swissgrid schedule (V" + str(GetLatestSwissIntradayScheduleVersion(path)) + ") is imbalanced. Email is triggered")
+
+        send_mail(send_from="nominations@statmark.de",
+                  send_to=recipients,
+                  send_cc= [],
+                  send_bcc= [],
+                  subject=GetEmailSubject(path),
+                  message=GetEmailBody(imbalancedPeriods, path),
+                  files=[],
+                  server= "mail.123domain.eu",
+                  port=587,
+                  username="nominations@statmark.de",
+                  password="fk390krvadf",
+                  use_tls=True)
+    else:
+        print("Hooray: Swissgrid schedule (V" + str(GetLatestSwissIntradayScheduleVersion(path)) + ") is perfectly balanced.")
