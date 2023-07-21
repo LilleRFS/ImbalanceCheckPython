@@ -98,7 +98,7 @@ def GetEmailBody(imbalancedPeriods):
 
     return warnMessage
 
-def GetExternalFlowsIntoSwitzerland(scheduleMessage):
+def GetImportFlows(scheduleMessage):
     externalFlowsIntoSwitzerland = {}
 
     for ts in scheduleMessage[NODE_SCHEDULE_MESSAGE][NODE_SCHEDULE_TIMESERIES]:
@@ -110,7 +110,7 @@ def GetExternalFlowsIntoSwitzerland(scheduleMessage):
     return externalFlowsIntoSwitzerland
 
 
-def GetExternalFlowsOutOfSwitzerland(scheduleMessage):
+def GetExportFlows(scheduleMessage):
     externalFlowsOutOfSwitzerland = {}
 
     for ts in scheduleMessage[NODE_SCHEDULE_MESSAGE][NODE_SCHEDULE_TIMESERIES]:
@@ -122,7 +122,7 @@ def GetExternalFlowsOutOfSwitzerland(scheduleMessage):
     return externalFlowsOutOfSwitzerland
 
 
-def GetInternalBuyPositionsSwitzerland(scheduleMessage):
+def GetBuys(scheduleMessage):
     internalBuyPositionsSwitzerland = {}
 
     for ts in scheduleMessage[NODE_SCHEDULE_MESSAGE][NODE_SCHEDULE_TIMESERIES]:
@@ -135,7 +135,7 @@ def GetInternalBuyPositionsSwitzerland(scheduleMessage):
     return internalBuyPositionsSwitzerland
 
 
-def GetInternalSellPositionsSwitzerland(scheduleMessage):
+def GetSells(scheduleMessage):
     internalSellPositionsSwitzerland = {}
 
     for ts in scheduleMessage[NODE_SCHEDULE_MESSAGE][NODE_SCHEDULE_TIMESERIES]:
@@ -148,7 +148,7 @@ def GetInternalSellPositionsSwitzerland(scheduleMessage):
     return internalSellPositionsSwitzerland
 
 
-def AggregatePositions(LstTimeseries):
+def GetAggrPos(LstTimeseries):
     aggregatedPosition = {}
 
     if len(LstTimeseries) > 0:
@@ -181,6 +181,41 @@ def GetJsonContent(uncPath):
 
     return jsonContent
 
+def GetDirection(imbalanceVolume):
+    if imbalanceVolume > 0:
+        return "long"
+    else:
+        return "short"
+
+def GetImbalancePeriods(exportFlows,importFlows,buyPositions,sellPositions,periods):
+
+    #Flows and positions are aggregated over balance groups
+
+    imbalancedPeriods={}
+
+    for x in range(periods):
+
+        if len(exportFlows)>0:
+            flowsOut = exportFlows[x]
+        else:
+            flowsOut = 0
+
+        if len(importFlows) > 0:
+            flowsIn = importFlows[x]
+        else:
+            flowsIn = 0
+
+        imbalanceVolume = flowsIn - flowsOut + buyPositions[x] - sellPositions[x]
+
+        if imbalanceVolume != 0:
+
+            key='Period ' + str( x+1).zfill(2) + ": " + str(abs(imbalanceVolume)) + " MW " + GetDirection(imbalanceVolume)
+
+            imbalancedPeriods[key] = key
+
+    return imbalancedPeriods
+
+
 #End of function section
 #---------------------------------------------------------
 
@@ -197,55 +232,13 @@ jsonContent = GetJsonContent(uncPath)
 
 message = json.loads(jsonContent)
 
-periods = len(message[NODE_SCHEDULE_MESSAGE][NODE_SCHEDULE_TIMESERIES][0][NODE_PERIOD][NODE_INTERVAL])
+imbalancedPeriods=GetImbalancePeriods(exportFlows= GetAggrPos(GetExportFlows(message)),
+                                      importFlows= GetAggrPos(GetImportFlows(message)),
+                                      buyPositions= GetAggrPos(GetBuys(message)),
+                                      sellPositions= GetAggrPos(GetSells(message)),
+                                      periods= len(message[NODE_SCHEDULE_MESSAGE][NODE_SCHEDULE_TIMESERIES][0][NODE_PERIOD][NODE_INTERVAL]))
 
-externalFlowsIntoSwitzerland = GetExternalFlowsIntoSwitzerland(message)
-externalFlowsOutOfSwitzerland = GetExternalFlowsOutOfSwitzerland(message)
-
-internalBuyPositions = GetInternalBuyPositionsSwitzerland(message)
-internalSellPositions = GetInternalSellPositionsSwitzerland(message)
-
-aggrExternalFlowIntoSwitzerland = AggregatePositions(externalFlowsIntoSwitzerland)
-
-aggrExternalFlowOutOfSwitzerland = AggregatePositions(externalFlowsOutOfSwitzerland)
-
-aggrInternalBuyPositions = AggregatePositions(internalBuyPositions)
-
-aggrInternalSellPositions = AggregatePositions(internalSellPositions)
-
-imbalance=False
-
-imbalancedPeriods={}
-
-for x in range(periods):
-
-    if len(aggrExternalFlowOutOfSwitzerland)>0:
-        flowsOut = aggrExternalFlowOutOfSwitzerland[x]
-    else:
-        flowsOut = 0
-
-    if len(aggrExternalFlowIntoSwitzerland) > 0:
-        flowsIn = aggrExternalFlowIntoSwitzerland[x]
-    else:
-        flowsIn = 0
-
-    imbalanceVolume = flowsIn- flowsOut + aggrInternalBuyPositions[x] - aggrInternalSellPositions[x]
-
-    if imbalanceVolume != 0:
-        
-        direction = ""
-        if imbalanceVolume > 0:
-            direction = "long"
-        else:
-            direction = "short"
-
-        key='Period ' + str( x+1).zfill(2) + ": " + str(abs(imbalanceVolume)) + " MW " + direction
-
-        imbalancedPeriods[key] = key
-
-        imbalance = True
-
-if imbalance == True:
+if len(imbalancedPeriods)>0:
 
     print("Swissgrid schedule is imbalanced. Email is triggered")
 
@@ -261,20 +254,5 @@ if imbalance == True:
               username="nominations@statmark.de",
               password="fk390krvadf",
               use_tls=True)
-
-
-    #send_mail(send_from="nominations@statkraft.de",
-    #          send_to=["lukas.dicke@web.de","lukas.dicke@statkraft.de"],
-    #          send_cc= [],
-    #          send_bcc= [],
-    #          subject="Attention: Swissgrid schedule is imbalanced",
-    #          message=GetEmailBody(imbalancedPeriods),
-    #          files=[],
-    #          server= "maildus.energycorp.com",
-    #          port=25,
-    #          username="nominations@statkraft.de",
-    #          password="OlympicGames2018",
-    #          use_tls=True)
-
 else:
     print("Hooray: Swissgrid schedule is balanced.")
