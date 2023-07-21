@@ -263,18 +263,18 @@ if imbalance == True:
               use_tls=True)
 
 
-    send_mail(send_from="nominations@statkraft.de",
-              send_to=["lukas.dicke@web.de","lukas.dicke@statkraft.de"],
-              send_cc= [],
-              send_bcc= [],
-              subject="Attention: Swissgrid schedule is imbalanced",
-              message=GetEmailBody(imbalancedPeriods),
-              files=[],
-              server= "maildus.energycorp.com",
-              port=25,
-              username="nominations@statkraft.de",
-              password="OlympicGames2018",
-              use_tls=True)
+    #send_mail(send_from="nominations@statkraft.de",
+    #          send_to=["lukas.dicke@web.de","lukas.dicke@statkraft.de"],
+    #          send_cc= [],
+    #          send_bcc= [],
+    #          subject="Attention: Swissgrid schedule is imbalanced",
+    #          message=GetEmailBody(imbalancedPeriods),
+    #          files=[],
+    #          server= "maildus.energycorp.com",
+    #          port=25,
+    #          username="nominations@statkraft.de",
+    #          password="OlympicGames2018",
+    #          use_tls=True)
 
 else:
     print("Hooray: Swissgrid schedule is balanced.")
