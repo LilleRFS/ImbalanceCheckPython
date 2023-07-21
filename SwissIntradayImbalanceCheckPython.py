@@ -88,13 +88,73 @@ def send_mail(send_from, send_to,send_cc,send_bcc, subject, message, files=[],
 
     print("Mail sent successfully")
 
-def GetEmailBody(imbalancedPeriods):
-    warnMessage="Hi," + "\n\n" + "please be advised that the current intraday schedule is imabalance in the following periods:" + "\n\n"
+def GetLatestSwissIntradaySchedule(myPath):
+    from os import listdir
+    from os.path import isfile, join
+    from datetime import datetime
+
+    onlyfiles = [f for f in listdir(myPath) 
+                 if isfile(join(myPath, f)) 
+                 if f.__contains__("_TPS_11XSTATKRAFT001N_10XCH-SWISSGRIDC_")
+                 if f.__contains__(datetime.now().strftime("%Y%m%d"))
+                 ]
+
+    highestVersion=1
+    latestSchedule=""
+
+    for file in onlyfiles:
+
+        version=float(file[-7:][:3])
+
+        if version>highestVersion:
+            highestVersion=version
+            latestSchedule=file
+
+
+    return latestSchedule
+
+def GetLatestSwissIntradayScheduleVersion(myPath):
+    from os import listdir
+    from os.path import isfile, join
+    from datetime import datetime
+
+    onlyfiles = [f for f in listdir(myPath) 
+                 if isfile(join(myPath, f)) 
+                 if f.__contains__("_TPS_11XSTATKRAFT001N_10XCH-SWISSGRIDC_")
+                 if f.__contains__(datetime.now().strftime("%Y%m%d"))
+                 ]
+
+    highestVersion=1
+
+    for file in onlyfiles:
+
+        version=float(file[-7:][:3])
+
+        if version>highestVersion:
+            highestVersion=version
+
+
+    return int(highestVersion)
+
+
+def GetEmailBody(imbalancedPeriods, myPath):
+
+    warnMessage="Hi," + "\n\n" + "please be advised that the current intraday schedule (Version: " + str(GetLatestSwissIntradayScheduleVersion(myPath)) + ") is imbalanced by the following periods:" + "\n\n"
+
     for key in imbalancedPeriods.keys():
+
         print(key)
+
         warnMessage=warnMessage + key + "\n"
 
+
     warnMessage=warnMessage + "\n\n" + "Kind regards" + "\n\n\n" +"Stakraft Operations"
+
+    return warnMessage
+
+def GetEmailSubject(myPath):
+
+    warnMessage="Attention: Swissgrid intraday schedule (V" + str(GetLatestSwissIntradayScheduleVersion(myPath))  +") is imbalanced"
 
     return warnMessage
 
@@ -219,18 +279,12 @@ def GetImbalancePeriods(exportFlows,importFlows,buyPositions,sellPositions,perio
 #End of function section
 #---------------------------------------------------------
 
+
 path="C:\\Test\\"
-file="20230607_TPS_11XSTATKRAFT001N_10XCH-SWISSGRIDC_007.xml"
 
-file="20230719_TPS_11XSTATKRAFT001N_10XCH-SWISSGRIDC_002.xml"
+file=GetLatestSwissIntradaySchedule(path)
 
-uncPath=path + file
-
-uncPath = input("Please specify Swissgrid schedule path:")
-
-jsonContent = GetJsonContent(uncPath)
-
-message = json.loads(jsonContent)
+message = json.loads(GetJsonContent(path + file))
 
 imbalancedPeriods=GetImbalancePeriods(exportFlows= GetAggrPos(GetExportFlows(message)),
                                       importFlows= GetAggrPos(GetImportFlows(message)),
@@ -240,14 +294,14 @@ imbalancedPeriods=GetImbalancePeriods(exportFlows= GetAggrPos(GetExportFlows(mes
 
 if len(imbalancedPeriods)>0:
 
-    print("Swissgrid schedule is imbalanced. Email is triggered")
+    print("Swissgrid schedule (V" + str(GetLatestSwissIntradayScheduleVersion(path)) + ") is imbalanced. Email is triggered")
 
     send_mail(send_from="nominations@statmark.de",
               send_to=["lukas.dicke@web.de","lukas.dicke@statkraft.de"],
               send_cc= [],
               send_bcc= [],
-              subject="Attention: Swissgrid schedule is imbalanced",
-              message=GetEmailBody(imbalancedPeriods),
+              subject=GetEmailSubject(path),
+              message=GetEmailBody(imbalancedPeriods, path),
               files=[],
               server= "mail.123domain.eu",
               port=587,
@@ -255,4 +309,4 @@ if len(imbalancedPeriods)>0:
               password="fk390krvadf",
               use_tls=True)
 else:
-    print("Hooray: Swissgrid schedule is balanced.")
+    print("Hooray: Swissgrid schedule (V" + str(GetLatestSwissIntradayScheduleVersion(path)) + ") is balanced.")
