@@ -282,6 +282,10 @@ def GetImbalancePeriods(exportFlows,importFlows,buyPositions,sellPositions,perio
 
 path="C:\\Test\\"
 
+recipients=["lukas.dicke@web.de","lukas.dicke@statkraft.de"]
+
+
+
 file=GetLatestSwissIntradaySchedule(path)
 
 message = json.loads(GetJsonContent(path + file))
@@ -297,7 +301,7 @@ if len(imbalancedPeriods)>0:
     print("Swissgrid schedule (V" + str(GetLatestSwissIntradayScheduleVersion(path)) + ") is imbalanced. Email is triggered")
 
     send_mail(send_from="nominations@statmark.de",
-              send_to=["lukas.dicke@web.de","lukas.dicke@statkraft.de"],
+              send_to=recipients,
               send_cc= [],
               send_bcc= [],
               subject=GetEmailSubject(path),
