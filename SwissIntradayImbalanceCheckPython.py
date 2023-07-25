@@ -303,20 +303,39 @@ def GetImbalancePeriods(exportFlows,importFlows,buyPositions,sellPositions,perio
 
             key='Period ' + str( x+1).zfill(2) + ": " + str(abs(imbalanceVolume)) + " MW " + GetDirection(imbalanceVolume)
 
+            key='Period ' + str( x+1).zfill(2) + " (" + GetTimestamp(x+1) + ")" + ": " + str(abs(imbalanceVolume)) + " MW " + GetDirection(imbalanceVolume)
+
             imbalancedPeriods[key] = key
 
     return imbalancedPeriods
+
+def GetTimestamp(Period):
+    
+    startHour =int ((Period-1) / 4);
+
+    startMinute = ((startHour+1) * 4 - Period );
+
+    if startMinute==0:
+        #return (startHour).ToString("00") + ":45" + " - " + (startHour+1).ToString("00") + ":00"
+        return str(startHour).zfill(2) + ":45" + " - " + str(startHour).zfill(2) + ":00"
+    elif startMinute==1:
+        #return (startHour).ToString("00") + ":30" + " - " + (startHour).ToString("00") + ":45"
+        return str(startHour).zfill(2) + ":30" + " - " + str(startHour).zfill(2) + ":45"
+    elif startMinute==2:
+        #return (startHour).ToString("00") + ":15" + " - " + (startHour).ToString("00") + ":30"
+        return str(startHour).zfill(2) + ":15" + " - " + str(startHour).zfill(2) + ":30"
+    else:
+        #return (startHour).ToString("00") + ":00" + " - " + (startHour).ToString("00") + ":15"
+        return str(startHour).zfill(2) + ":00" + " - " + str(startHour).zfill(2) + ":15"
 
 
 #End of function section
 #---------------------------------------------------------
 
 
-#path="C:\\Test\\outgoing\\"
+path="C:\\Test\\"
 
-path=r"\\energycorp.com\\common\\DIVSEDE\\Operations\\DeltaXE\\Schedules_ManualUpload\\"
-
-#path="H:\\Operations\\DeltaXE\\Schedules_ManualUpload\\"
+#path=r"\\energycorp.com\\common\\DIVSEDE\\Operations\\DeltaXE\\Schedules_ManualUpload\\"
 
 recipients=["lukas.dicke@web.de","lukas.dicke@statkraft.de"]
 
