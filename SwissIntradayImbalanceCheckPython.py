@@ -171,7 +171,7 @@ def GetLatestSwissIntradayScheduleVersion(myPath):
 
 def GetEmailBody(imbalancedPeriods, version):
 
-    warnMessage="Hi," + "\n\n" + "please be advised that the current intraday schedule (Version: " + str(version) + ") is imbalanced by the following periods:" + "\n\n"
+    warnMessage="Hi," + "\n\n" + "please be advised that the current SWISS intraday schedule (Version: " + str(version) + ") is imbalanced by the following periods:" + "\n\n"
 
     for key in imbalancedPeriods.keys():
 
@@ -300,8 +300,6 @@ def GetImbalancePeriods(exportFlows,importFlows,buyPositions,sellPositions,perio
         imbalanceVolume = flowsIn - flowsOut + buyPositions[x] - sellPositions[x]
 
         if imbalanceVolume != 0:
-
-            key='Period ' + str( x+1).zfill(2) + ": " + str(abs(imbalanceVolume)) + " MW " + GetDirection(imbalanceVolume)
 
             key='Period ' + str( x+1).zfill(2) + " (" + GetTimestamp(x+1) + ")" + ": " + str(abs(imbalanceVolume)) + " MW " + GetDirection(imbalanceVolume)
 
