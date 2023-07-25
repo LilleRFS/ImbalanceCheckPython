@@ -18,6 +18,7 @@ AMPRION_EIC="10YDE-RWENET---I"
 SUBSTRING_TO_FIND_SWISS="_TPS_11XSTATKRAFT001N_10XCH-SWISSGRIDC_"
 
 NODE_SCHEDULE_MESSAGE = 'ScheduleMessage'
+NODE_MESSAGEVERSION="MessageVersion"
 NODE_SCHEDULE_TIMESERIES = 'ScheduleTimeSeries'
 NODE_PERIOD = 'Period'
 NODE_INTERVAL = 'Interval'
@@ -168,9 +169,9 @@ def GetLatestSwissIntradayScheduleVersion(myPath):
     return int(highestVersion)
 
 
-def GetEmailBody(imbalancedPeriods, myPath):
+def GetEmailBody(imbalancedPeriods, version):
 
-    warnMessage="Hi," + "\n\n" + "please be advised that the current intraday schedule (Version: " + str(GetLatestSwissIntradayScheduleVersion(myPath)) + ") is imbalanced by the following periods:" + "\n\n"
+    warnMessage="Hi," + "\n\n" + "please be advised that the current intraday schedule (Version: " + str(version) + ") is imbalanced by the following periods:" + "\n\n"
 
     for key in imbalancedPeriods.keys():
 
@@ -183,9 +184,9 @@ def GetEmailBody(imbalancedPeriods, myPath):
 
     return warnMessage
 
-def GetEmailSubject(myPath):
+def GetEmailSubject(version):
 
-    warnMessage="Attention: Swissgrid intraday schedule (V" + str(GetLatestSwissIntradayScheduleVersion(myPath))  +") is imbalanced"
+    warnMessage="Attention: Swissgrid intraday schedule (V" + str(version) + ") is imbalanced"
 
     return warnMessage
 
@@ -311,7 +312,11 @@ def GetImbalancePeriods(exportFlows,importFlows,buyPositions,sellPositions,perio
 #---------------------------------------------------------
 
 
-path="C:\\Test\\outgoing\\"
+#path="C:\\Test\\outgoing\\"
+
+path=r"\\energycorp.com\\common\\DIVSEDE\\Operations\\DeltaXE\\Schedules_ManualUpload\\"
+
+#path="H:\\Operations\\DeltaXE\\Schedules_ManualUpload\\"
 
 recipients=["lukas.dicke@web.de","lukas.dicke@statkraft.de"]
 
@@ -331,6 +336,9 @@ if file!="":
 
     message = json.loads(GetJsonContent(path + file))
 
+    messageVersion=message[NODE_SCHEDULE_MESSAGE][NODE_MESSAGEVERSION][NODE_V]
+
+
     imbalancedPeriods=GetImbalancePeriods(exportFlows= GetAggrPos(GetExportFlows(message,tsoEic)),
                                           importFlows= GetAggrPos(GetImportFlows(message,tsoEic)),
                                           buyPositions= GetAggrPos(GetBuys(message,tsoEic)),
@@ -339,14 +347,14 @@ if file!="":
 
     if len(imbalancedPeriods)>0:
 
-        print("Swissgrid schedule (V" + str(GetLatestSwissIntradayScheduleVersion(path)) + ") is imbalanced. Email is triggered")
+        print("Swissgrid schedule (V" + str(messageVersion) + ") is imbalanced. Email is triggered")
 
         send_mail(send_from="nominations@statmark.de",
                   send_to=recipients,
                   send_cc= [],
                   send_bcc= [],
-                  subject=GetEmailSubject(path),
-                  message=GetEmailBody(imbalancedPeriods, path),
+                  subject=GetEmailSubject(messageVersion),
+                  message=GetEmailBody(imbalancedPeriods, messageVersion),
                   files=[],
                   server= "mail.123domain.eu",
                   port=587,
@@ -354,4 +362,4 @@ if file!="":
                   password="fk390krvadf",
                   use_tls=True)
     else:
-        print("Hooray: Swissgrid schedule (V" + str(GetLatestSwissIntradayScheduleVersion(path)) + ") is perfectly balanced.")
+        print("Hooray: Swissgrid schedule (V" + str(messageVersion) + ") is perfectly balanced.")
