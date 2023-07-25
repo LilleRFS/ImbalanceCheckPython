@@ -119,6 +119,31 @@ def GetLatestSwissIntradaySchedule(myPath, substringToFind):
 
     return latestSchedule
 
+
+def HousekeepingIntradayScheduleVersion(myPath, substringToFind):
+    from os import listdir
+    from os import remove as FileDelete
+    from os.path import isfile, join
+    from datetime import datetime, timedelta
+
+    onlyfiles = [f for f in listdir(myPath) 
+                 if isfile(join(myPath, f)) 
+                 if substringToFind in f
+                 if (datetime.now()+ timedelta(days = 2)).strftime("%Y%m%d") not in f
+                 if (datetime.now()+ timedelta(days = 1)).strftime("%Y%m%d") not in f
+                 if (datetime.now()+ timedelta(days = 0)).strftime("%Y%m%d") not in f
+                 if (datetime.now()+ timedelta(days = -1)).strftime("%Y%m%d") not in f
+                 if (datetime.now()+ timedelta(days = -2)).strftime("%Y%m%d") not in f
+                 if (datetime.now()+ timedelta(days = -3)).strftime("%Y%m%d") not in f
+                 if (datetime.now()+ timedelta(days = -4)).strftime("%Y%m%d") not in f
+                 if (datetime.now()+ timedelta(days = -5)).strftime("%Y%m%d") not in f
+                 if (datetime.now()+ timedelta(days = -6)).strftime("%Y%m%d") not in f
+                 if (datetime.now()+ timedelta(days = -7)).strftime("%Y%m%d") not in f
+                 ]
+
+    for file in onlyfiles:
+       FileDelete(join(myPath,file))
+
 def GetLatestSwissIntradayScheduleVersion(myPath):
     from os import listdir
     from os.path import isfile, join
@@ -126,7 +151,7 @@ def GetLatestSwissIntradayScheduleVersion(myPath):
 
     onlyfiles = [f for f in listdir(myPath) 
                  if isfile(join(myPath, f)) 
-                 if f.__contains__("_TPS_11XSTATKRAFT001N_10XCH-SWISSGRIDC_")
+                 if f.__contains__(SUBSTRING_TO_FIND_SWISS)
                  if f.__contains__(datetime.now().strftime("%Y%m%d"))
                  ]
 
@@ -286,17 +311,19 @@ def GetImbalancePeriods(exportFlows,importFlows,buyPositions,sellPositions,perio
 #---------------------------------------------------------
 
 
-path="C:\\Test\\"
+path="C:\\Test\\outgoing\\"
 
 recipients=["lukas.dicke@web.de","lukas.dicke@statkraft.de"]
 
 substringToFind=SUBSTRING_TO_FIND_SWISS
 
-substringToFind="_TPS_11XSTATKRAFT001N_10XDE-RWENET---W"
+#substringToFind="_TPS_11XSTATKRAFT001N_10XDE-RWENET---W"
 
 tsoEic=SWISSGRID_EIC
 
-tsoEic=AMPRION_EIC
+#tsoEic=AMPRION_EIC
+
+HousekeepingIntradayScheduleVersion(path,substringToFind)
 
 file=GetLatestSwissIntradaySchedule(path,substringToFind)
 
