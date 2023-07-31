@@ -36,8 +36,8 @@ NODE_QTY = 'Qty'
 #---------------------------------------------------------
 
 
-def send_mail(send_from, send_to,send_cc,send_bcc, subject, message, files=[],
-              server="localhost", port=587, username='', password='',
+def send_mail(send_from, send_to, send_cc, send_bcc, subject, message, files=[],
+              server="localhost", port=587, loginRequired=True, username='', password='',
               use_tls=True):
     """Compose and send email with provided info and attachments.
 
@@ -88,7 +88,8 @@ def send_mail(send_from, send_to,send_cc,send_bcc, subject, message, files=[],
     smtp = smtplib.SMTP(server, port)
     if use_tls:
         smtp.starttls()
-    smtp.login(username, password)
+    if loginRequired:
+        smtp.login(username, password)
     smtp.sendmail(send_from, send_to, msg.as_string())
     smtp.quit()
 
@@ -352,7 +353,7 @@ def GetTimestamp(Period):
 #End of function section
 #---------------------------------------------------------
 
-leadTimeBufferQuarterperiods=-96
+leadTimeBufferQuarterperiods=8
 
 path="C:\\Test\\"
 
@@ -394,21 +395,34 @@ if file!="":
 
         #modified_dict = dict(d.values() for d in imbalancedPeriods)
 
-        df = pd.DataFrame(imbalancedPeriods.values(),columns=['Swiss intraday imbalances'])
+       # df = pd.DataFrame(imbalancedPeriods.values(),columns=['Swiss intraday imbalances'])
 
-        print(df)
+        #print(df)
 
-        # send_mail(send_from="nominations@statmark.de",
-        #           send_to=recipients,
-        #           send_cc= [],
-        #           send_bcc= [],
-        #           subject=GetEmailSubject(messageVersion),
-        #           message=GetEmailBody(imbalancedPeriods, messageVersion),
-        #           files=[],
-        #           server= "mail.123domain.eu",
-        #           port=587,
-        #           username="nominations@statmark.de",
-        #           password="fk390krvadf",
-        #           use_tls=True)
+        # send_mail_statmark(send_from="nominations@statmark.de",
+        #                    send_to=recipients,
+        #                    send_cc= [],
+        #                    send_bcc= [],
+        #                    subject=GetEmailSubject(messageVersion),
+        #                    message=GetEmailBody(imbalancedPeriods, messageVersion),
+        #                    files=[],
+        #                    server= "mail.123domain.eu",
+        #                    port=587,
+        #                    username="nominations@statmark.de",
+        #                    password="fk390krvadf",
+        #                    use_tls=True)
+
+        send_mail(send_from="no-reply-duswvpyt002p@statkraft.de",
+                  send_to=recipients,
+                  send_cc= [],
+                  send_bcc= [],
+                  subject=GetEmailSubject(messageVersion),
+                  message=GetEmailBody(imbalancedPeriods, messageVersion),
+                  files=[],
+                  server= "smtpdus.energycorp.com",
+                  port=587,
+                  loginRequired=False,
+                  use_tls=True)
+
     else:
         print("Hooray: Swissgrid schedule (V" + str(messageVersion) + ") is perfectly balanced.")
