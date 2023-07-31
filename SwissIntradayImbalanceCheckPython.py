@@ -6,6 +6,7 @@ from email.mime.base import MIMEBase
 from email.mime.text import MIMEText
 from email.utils import formatdate
 from email import encoders
+import pandas as pd
 
 #Constants
 #---------------------------------------------------------
@@ -98,8 +99,8 @@ def GetLatestSwissIntradaySchedule(myPath, substringToFind):
     from os.path import isfile, join
     from datetime import datetime
 
-    onlyfiles = [f for f in listdir(myPath) 
-                 if isfile(join(myPath, f)) 
+    onlyfiles = [f for f in listdir(myPath)
+                 if isfile(join(myPath, f))
                  if f.__contains__(substringToFind)
                  if f.__contains__(datetime.now().strftime("%Y%m%d"))
                  ]
@@ -127,8 +128,8 @@ def HousekeepingIntradayScheduleVersion(myPath, substringToFind):
     from os.path import isfile, join
     from datetime import datetime, timedelta
 
-    onlyfiles = [f for f in listdir(myPath) 
-                 if isfile(join(myPath, f)) 
+    onlyfiles = [f for f in listdir(myPath)
+                 if isfile(join(myPath, f))
                  if substringToFind in f
                  if (datetime.now()+ timedelta(days = 2)).strftime("%Y%m%d") not in f
                  if (datetime.now()+ timedelta(days = 1)).strftime("%Y%m%d") not in f
@@ -150,8 +151,8 @@ def GetLatestSwissIntradayScheduleVersion(myPath):
     from os.path import isfile, join
     from datetime import datetime
 
-    onlyfiles = [f for f in listdir(myPath) 
-                 if isfile(join(myPath, f)) 
+    onlyfiles = [f for f in listdir(myPath)
+                 if isfile(join(myPath, f))
                  if f.__contains__(SUBSTRING_TO_FIND_SWISS)
                  if f.__contains__(datetime.now().strftime("%Y%m%d"))
                  ]
@@ -279,7 +280,7 @@ def GetDirection(imbalanceVolume):
     else:
         return "short"
 
-def GetImbalancePeriods(exportFlows,importFlows,buyPositions,sellPositions,periods):
+def GetImbalancePeriods(exportFlows,importFlows,buyPositions,sellPositions,periods, leadTimeBufferQuarterPeriods):
 
     #Flows and positions are aggregated over balance groups
 
@@ -287,28 +288,49 @@ def GetImbalancePeriods(exportFlows,importFlows,buyPositions,sellPositions,perio
 
     for x in range(periods):
 
-        if len(exportFlows)>0:
-            flowsOut = exportFlows[x]
-        else:
-            flowsOut = 0
+        if GetCurrentQuarterPeriod()+leadTimeBufferQuarterPeriods <= x:
 
-        if len(importFlows) > 0:
-            flowsIn = importFlows[x]
-        else:
-            flowsIn = 0
+            if len(exportFlows)>0:
+                flowsOut = exportFlows[x]
+            else:
+                flowsOut = 0
 
-        imbalanceVolume = flowsIn - flowsOut + buyPositions[x] - sellPositions[x]
+            if len(importFlows) > 0:
+                flowsIn = importFlows[x]
+            else:
+                flowsIn = 0
 
-        if imbalanceVolume != 0:
+            imbalanceVolume = flowsIn - flowsOut + buyPositions[x] - sellPositions[x]
 
-            key='Period ' + str( x+1).zfill(2) + " (" + GetTimestamp(x+1) + ")" + ": " + str(abs(imbalanceVolume)) + " MW " + GetDirection(imbalanceVolume)
+            if imbalanceVolume != 0:
 
-            imbalancedPeriods[key] = key
+                key='Period ' + str( x+1).zfill(2) + " (" + GetTimestamp(x+1) + ")" + ": " + str(abs(imbalanceVolume)) + " MW " + GetDirection(imbalanceVolume)
+
+                imbalancedPeriods[key] = key
 
     return imbalancedPeriods
 
+
+def GetCurrentQuarterPeriod():
+    import datetime
+    now = datetime.datetime.now()
+
+    currentHour= now.hour
+    currentMinute=now.minute
+
+    if currentMinute>0 and currentMinute<=15:
+        minute=1
+    elif currentMinute>15 and currentMinute <=30:
+        minute=2
+    elif currentMinute>30 and currentMinute<=45:
+        minute=3
+    else:
+        minute=4
+
+    return ((currentHour)*4)+minute
+
 def GetTimestamp(Period):
-    
+
     startHour =int ((Period-1) / 4);
 
     startMinute = ((startHour+1) * 4 - Period );
@@ -330,12 +352,13 @@ def GetTimestamp(Period):
 #End of function section
 #---------------------------------------------------------
 
+leadTimeBufferQuarterperiods=-96
 
 path="C:\\Test\\"
 
-#path=r"\\energycorp.com\\common\\DIVSEDE\\Operations\\DeltaXE\\Schedules_ManualUpload\\"
+path=r"\\energycorp.com\\common\\DIVSEDE\\Operations\\DeltaXE\\Schedules_ManualUpload\\"
 
-recipients=["lukas.dicke@web.de","lukas.dicke@statkraft.de"]
+recipients=["lukas.dicke@web.de", "lukas.dicke@statkraft.de"]
 
 substringToFind=SUBSTRING_TO_FIND_SWISS
 
@@ -349,6 +372,8 @@ HousekeepingIntradayScheduleVersion(path,substringToFind)
 
 file=GetLatestSwissIntradaySchedule(path,substringToFind)
 
+time=GetCurrentQuarterPeriod()
+
 if file!="":
 
     message = json.loads(GetJsonContent(path + file))
@@ -360,23 +385,30 @@ if file!="":
                                           importFlows= GetAggrPos(GetImportFlows(message,tsoEic)),
                                           buyPositions= GetAggrPos(GetBuys(message,tsoEic)),
                                           sellPositions= GetAggrPos(GetSells(message,tsoEic)),
-                                          periods= len(message[NODE_SCHEDULE_MESSAGE][NODE_SCHEDULE_TIMESERIES][0][NODE_PERIOD][NODE_INTERVAL]))
+                                          periods= len(message[NODE_SCHEDULE_MESSAGE][NODE_SCHEDULE_TIMESERIES][0][NODE_PERIOD][NODE_INTERVAL]),
+                                          leadTimeBufferQuarterPeriods=leadTimeBufferQuarterperiods)
 
     if len(imbalancedPeriods)>0:
 
         print("Swissgrid schedule (V" + str(messageVersion) + ") is imbalanced. Email is triggered")
 
-        send_mail(send_from="nominations@statmark.de",
-                  send_to=recipients,
-                  send_cc= [],
-                  send_bcc= [],
-                  subject=GetEmailSubject(messageVersion),
-                  message=GetEmailBody(imbalancedPeriods, messageVersion),
-                  files=[],
-                  server= "mail.123domain.eu",
-                  port=587,
-                  username="nominations@statmark.de",
-                  password="fk390krvadf",
-                  use_tls=True)
+        #modified_dict = dict(d.values() for d in imbalancedPeriods)
+
+        df = pd.DataFrame(imbalancedPeriods.values(),columns=['Swiss intraday imbalances'])
+
+        print(df)
+
+        # send_mail(send_from="nominations@statmark.de",
+        #           send_to=recipients,
+        #           send_cc= [],
+        #           send_bcc= [],
+        #           subject=GetEmailSubject(messageVersion),
+        #           message=GetEmailBody(imbalancedPeriods, messageVersion),
+        #           files=[],
+        #           server= "mail.123domain.eu",
+        #           port=587,
+        #           username="nominations@statmark.de",
+        #           password="fk390krvadf",
+        #           use_tls=True)
     else:
         print("Hooray: Swissgrid schedule (V" + str(messageVersion) + ") is perfectly balanced.")
