@@ -95,6 +95,57 @@ def send_mail(send_from, send_to, send_cc, send_bcc, subject, message, files=[],
 
     print("Mail sent successfully")
 
+def SendMailPythonServer(send_to, send_cc, send_bcc,subject, message):
+    msgBody = """<html><head></head>
+        <style type = "text/css">
+            table, td {height: 3px; font-size: 14px; padding: 5px; border: 1px solid black;}
+            td {text-align: left;}
+            body {font-size: 12px;font-family:Calibri}
+            h2,h3 {font-family:Calibri}
+            p {font-size: 14px;font-family:Calibri}
+         </style>"""
+                   
+    msgBody += "<h2>" + subject + "</h2>"
+    #msgBody += "<h3>" + message + "</h3>"
+    msgBody += message
+    
+    strFrom = "no-reply-duswvpyt002p@statkraft.de"
+    
+    msgRoot = MIMEMultipart('related')
+    msgRoot['Subject'] = subject
+    msgRoot['From'] = strFrom
+    if len(send_to)==1:
+        msgRoot['To'] = send_to
+    else:
+         msgRoot['To'] =", ".join(send_to)
+
+    if len(send_cc)==1:
+         msgRoot['Cc'] = send_cc
+    else:
+         msgRoot['Cc']=", ".join(send_cc)
+
+    if len(send_cc)==1:
+         msgRoot['Bcc']=send_bcc
+    else:
+         msgRoot['Bcc']=", ".join(send_bcc)
+    msgRoot.preamble = 'This is a multi-part message in MIME format.'
+
+    msgAlternative = MIMEMultipart('alternative')
+    msgRoot.attach(msgAlternative)
+
+    msgText = MIMEText('Sorry this mail requires your mail client to allow for HTML e-mails.')
+    msgAlternative.attach(msgText)
+
+    msgText = MIMEText(msgBody, 'html')
+    msgAlternative.attach(msgText)
+
+
+    smtp = smtplib.SMTP('smtpdus.energycorp.com')
+    smtp.sendmail(strFrom, recipients, msgRoot.as_string())
+    smtp.quit()
+
+    print("Mail sent successfully from " + strFrom)
+
 def GetLatestSwissIntradaySchedule(myPath, substringToFind):
     from os import listdir
     from os.path import isfile, join
@@ -412,17 +463,11 @@ if file!="":
         #                    password="fk390krvadf",
         #                    use_tls=True)
 
-        send_mail(send_from="no-reply-duswvpyt002p@statkraft.de",
-                  send_to=recipients,
-                  send_cc= [],
-                  send_bcc= [],
-                  subject=GetEmailSubject(messageVersion),
-                  message=GetEmailBody(imbalancedPeriods, messageVersion),
-                  files=[],
-                  server= "smtpdus.energycorp.com",
-                  port=587,
-                  loginRequired=False,
-                  use_tls=True)
+        SendMailPythonServer(send_to=recipients, 
+                             send_cc=[], 
+                             send_bcc=[],
+                             subject= GetEmailSubject(messageVersion), 
+                             message=GetEmailBody(imbalancedPeriods, messageVersion))
 
     else:
         print("Hooray: Swissgrid schedule (V" + str(messageVersion) + ") is perfectly balanced.")
